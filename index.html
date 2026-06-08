@@ -1,230 +1,683 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>J23NFL — Editor Audiovisual</title>
-<link rel="stylesheet" href="style.css">
-<script src="script.js" defer></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pong Retro Atari</title>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+body {
+    background: black;
+    color: #00ff66;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+h1 {
+    font-size: 60px;
+    text-shadow: 0 0 20px #00ff66, 0 0 40px #00ff66;
+    letter-spacing: 8px;
+}
+
+button, select {
+    padding: 12px 25px;
+    font-size: 18px;
+    font-family: 'Courier New', monospace;
+    background: black;
+    color: #00ff66;
+    border: 2px solid #00ff66;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    letter-spacing: 2px;
+}
+
+button:hover {
+    background: #00ff66;
+    color: black;
+}
+
+select option {
+    background: black;
+}
+
+/* ── Menú ── */
+#menu {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    background: black;
+    z-index: 20;
+}
+
+#menu .subtitle {
+    font-size: 13px;
+    letter-spacing: 3px;
+    opacity: 0.6;
+    margin-top: -10px;
+}
+
+#menu .controls-hint {
+    font-size: 12px;
+    opacity: 0.45;
+    text-align: center;
+    line-height: 1.8;
+    margin-top: 6px;
+}
+
+/* ── Marcador ── */
+#score {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    top: 18px;
+    font-size: 42px;
+    text-shadow: 0 0 10px #00ff66;
+    z-index: 5;
+    letter-spacing: 12px;
+    pointer-events: none;
+}
+
+/* ── HUD extra (nivel / récord) ── */
+#hud {
+    position: absolute;
+    top: 18px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 30px;
+    font-size: 13px;
+    opacity: 0.55;
+    z-index: 5;
+    pointer-events: none;
+    letter-spacing: 2px;
+}
+
+/* ── Canvas ── */
+canvas {
+    display: block;
+    background: black;
+    border-radius: 20px;
+    transform: perspective(1000px) rotateX(2deg);
+    box-shadow: 0 0 60px rgba(0,255,102,0.15);
+}
+
+/* ── Pantalla de victoria ── */
+#victoryScreen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+    background: rgba(0,0,0,0.92);
+    z-index: 100;
+}
+
+#victoryScreen h1 {
+    animation: glitch 1.2s infinite;
+}
+
+@keyframes glitch {
+    0%, 100% { text-shadow: 0 0 20px #00ff66, 0 0 40px #00ff66; }
+    25%       { text-shadow: -3px 0 #ff003c, 3px 0 #00f0ff; }
+    75%       { text-shadow: 3px 0 #ff003c, -3px 0 #00f0ff; }
+}
+
+#victoryScreen .final-score {
+    font-size: 20px;
+    opacity: 0.7;
+    letter-spacing: 4px;
+}
+
+/* ── Overlay de pausa ── */
+#pauseOverlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0,0,0,0.65);
+    z-index: 50;
+    font-size: 52px;
+    letter-spacing: 10px;
+    text-shadow: 0 0 20px #00ff66;
+    pointer-events: none;
+}
+
+/* ── Power-up ── */
+.powerup-flash {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px;
+    letter-spacing: 3px;
+    color: #ffdd00;
+    text-shadow: 0 0 10px #ffdd00;
+    z-index: 30;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.powerup-flash.show {
+    opacity: 1;
+}
+
+/* ── Scanlines + CRT ── */
+.scanlines {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        transparent,
+        transparent 3px,
+        rgba(255,255,255,0.03) 4px
+    );
+    z-index: 10;
+}
+
+#crt {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle, transparent 55%, rgba(0,0,0,0.75));
+    z-index: 11;
+}
+</style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-  <a href="#" class="nav-logo">J23NFL</a>
-  <ul class="nav-links">
-    <li><a href="#sobre-mi">Sobre mí</a></li>
-    <li><a href="#habilidades">Habilidades</a></li>
-    <li><a href="#proyectos">Proyectos</a></li>
-    <li><a href="#contacto">Contacto</a></li>
-  </ul>
-</nav>
+<!-- ── MENÚ ── -->
+<div id="menu">
+    <h1>PONG</h1>
+    <p class="subtitle">RETRO ATARI EDITION</p>
 
-<!-- HERO -->
-<section class="hero" id="inicio" style="border-top: none; padding-top: 0;">
-  <div class="hero-bg"></div>
-  <p class="hero-tag fade-up delay-1">Editor Audiovisual · Motion Graphics · Contenido Digital</p>
-  <h1 class="hero-title fade-up delay-2">
-   J23<br>
-    <span class="line-accent">NFL</span>
-  </h1>
-  <p class="hero-sub fade-up delay-3">
-    Especializado en motion graphics y contenido para redes. Transformo ideas en piezas visuales que comunican, impactan y se recuerdan.
-  </p>
-  <a href="#proyectos" class="hero-cta fade-up delay-4">
-    Ver proyectos →
-  </a>
-  <span class="hero-scroll">Scroll</span>
-</section>
+    <select id="difficulty">
+        <option value="3">FÁCIL</option>
+        <option value="5" selected>NORMAL</option>
+        <option value="8">DIFÍCIL</option>
+    </select>
 
-<!-- SOBRE MÍ -->
-<section id="sobre-mi">
-  <p class="section-label">Sobre mí</p>
-  <div class="about-grid">
-    <h2 class="about-headline">Imagen en movimiento con propósito.</h2>
-    <div>
-      <p class="about-body">
-        Soy editor audiovisual con experiencia en producción de contenido para redes sociales, motion graphics y postproducción. Trabajo desde la idea hasta el render final, cuidando cada detalle visual y sonoro para que el resultado hable por sí solo.
-      </p>
-      <p class="about-body">
-        Mi flujo de trabajo integra las principales herramientas de la industria: desde la edición no lineal en Premiere Pro y DaVinci Resolve, hasta la animación y composición en After Effects, pasando por el diseño y retoque en Photoshop.
-      </p>
-      <div class="about-stats">
-        <div>
-          <p class="stat-num">2+</p>
-          <p class="stat-label">Años de experiencia</p>
-        </div>
-        <div>
-          <p class="stat-num">15+</p>
-          <p class="stat-label">Proyectos entregados</p>
-        </div>
-        <div>
-          <p class="stat-num">4</p>
-          <p class="stat-label">Herramientas dominadas</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+    <button onclick="startGame(1)">1 JUGADOR</button>
+    <button onclick="startGame(2)">2 JUGADORES</button>
 
-<!-- HABILIDADES -->
-<section id="habilidades">
-  <p class="section-label">Habilidades y herramientas</p>
-  <div class="skills-grid">
+    <p class="controls-hint">
+        J1: W / S &nbsp;|&nbsp; J2: ↑ / ↓<br>
+        ESC: Pausar &nbsp;|&nbsp; Primero en llegar a 11 gana
+    </p>
+</div>
 
-    <div class="skill-card">
-      <span class="skill-icon">🎬</span>
-      <p class="skill-name">Adobe Premiere Pro</p>
-      <p class="skill-desc">Edición no lineal, multicámara, color básico y mezcla de audio para proyectos de todo tipo.</p>
-      <div class="skill-level"><div class="skill-level-fill" style="width: 95%"></div></div>
-    </div>
+<!-- ── MARCADOR ── -->
+<div id="score">0 : 0</div>
 
-    <div class="skill-card">
-      <span class="skill-icon">✨</span>
-      <p class="skill-name">After Effects</p>
-      <p class="skill-desc">Motion graphics, composición, animación de texto, VFX y expresiones para automatizar flujos.</p>
-      <div class="skill-level"><div class="skill-level-fill" style="width: 92%"></div></div>
-    </div>
+<!-- ── HUD ── -->
+<div id="hud">
+    <span id="hudLeft">RECORD: 0</span>
+    <span id="hudRight">NIVEL 1</span>
+</div>
 
-    <div class="skill-card">
-      <span class="skill-icon">🎨</span>
-      <p class="skill-name">DaVinci Resolve</p>
-      <p class="skill-desc">Color grading profesional, etalonaje, edición y mezcla de sonido con Fairlight.</p>
-      <div class="skill-level"><div class="skill-level-fill" style="width: 88%"></div></div>
-    </div>
+<!-- ── CANVAS ── -->
+<canvas id="gameCanvas" width="900" height="500"></canvas>
 
-    <div class="skill-card">
-      <span class="skill-icon">🖼</span>
-      <p class="skill-name">Photoshop</p>
-      <p class="skill-desc">Retoque fotográfico, diseño de thumbnails, composición de imágenes y assets visuales.</p>
-      <div class="skill-level"><div class="skill-level-fill" style="width: 90%"></div></div>
-    </div>
+<!-- ── PAUSA ── -->
+<div id="pauseOverlay">PAUSA</div>
 
-    <div class="skill-card">
-      <span class="skill-icon">📱</span>
-      <p class="skill-name">Contenido para redes</p>
-      <p class="skill-desc">Formatos verticales y cuadrados, reels, stories y shorts optimizados para cada plataforma.</p>
-      <div class="skill-level"><div class="skill-level-fill" style="width: 97%"></div></div>
-    </div>
+<!-- ── VICTORIA ── -->
+<div id="victoryScreen">
+    <h1 id="winnerText"></h1>
+    <p class="final-score" id="finalScore"></p>
+    <button onclick="location.reload()">JUGAR OTRA VEZ</button>
+</div>
 
-    <div class="skill-card">
-      <span class="skill-icon">🔊</span>
-      <p class="skill-name">Diseño sonoro</p>
-      <p class="skill-desc">Sincronización, mezcla de audio, selección musical y efectos de sonido para potenciar la narrativa.</p>
-      <div class="skill-level"><div class="skill-level-fill" style="width: 80%"></div></div>
-    </div>
+<!-- ── POWER-UP FLASH ── -->
+<div class="powerup-flash" id="powerupFlash"></div>
 
-  </div>
-</section>
-
-<!-- PROYECTOS -->
-<section id="proyectos">
-  <div class="projects-header">
-    <p class="section-label" style="margin-bottom: 0;">Proyectos</p>
-  </div>
-  <div class="projects-list">
-
-    <a class="project-item" href="https://www.instagram.com/reel/DW109d-EnQT/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==" target="_blank">
-      <span class="project-num">01</span>
-      <div class="project-info">
-        <p class="project-title">Curiosidades — Redes Sociales</p>
-        <p class="project-meta">Branding · Motion · 2024</p>
-      </div>
-      <div class="project-tags">
-        <span class="tag">After Effects</span>
-        <span class="tag">Premiere</span>
-        <span class="cl-arrow">→</span>
-      </div>
-    </a>
-
-    <a class="project-item" href="https://www.instagram.com/reel/DYE7jeeMaGo/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==" target="_blank">
-      <span class="project-num">02</span>
-      <div class="project-info">
-        <p class="project-title">Videos para redes sociales</p>
-        <p class="project-meta">Motion Graphics · 2024</p>
-      </div>
-      <div class="project-tags">
-        <span class="tag">After Effects</span>
-        <span class="tag">Photoshop</span>
-        <span class="cl-arrow">→</span>
-      </div>
-    </a>
-
-    <a class="project-item" href="https://www.instagram.com/reel/DWZnKNKAqio/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==" target="_blank" >
-      <span class="project-num">03</span>
-      <div class="project-info">
-        <p class="project-title">Color Grading</p>
-        <p class="project-meta">Postproducción · 2023</p>
-      </div>
-      <div class="project-tags">
-        <span class="tag">DaVinci</span>
-        <span class="tag">Premiere</span>
-        <span class="cl-arrow">→</span>
-      </div>
-    </a>
-
-    <a class="project-item" href="https://www.instagram.com/reel/DWZnKNKAqio/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==" target="_blank" >
-      <span class="project-num">04</span>
-      <div class="project-info">
-        <p class="project-title">Proyecto Audiovisual con música</p>
-        <p class="project-meta">Social Content · 2023</p>
-      </div>
-      <div class="project-tags">
-        <span class="tag">Premiere</span>
-        <span class="tag">Photoshop</span>
-        <span class="cl-arrow">→</span>
-      </div>
-    </a>
-
-  </div>
-</section>
-
-<!-- CONTACTO -->
-<section id="contacto">
-  <p class="section-label">Contacto</p>
-  <div class="contact-inner">
-    <div>
-      <h2 class="contact-headline">REDES SOCIALES</h2>
-      <p class="contact-text">
-        Aprendiendo y cursando proyectos de edición, motion graphics y contenido audiovisual.
-      </p>
-    </div>
-    <div class="contact-links">
-      <a href="mailto:tuemail@ejemplo.com" class="contact-link">
-        <div>
-          <p class="cl-label">Email</p>
-          <p class="cl-value">jesus97mlg@gmail.com</p>
-        </div>
-        <span class="cl-arrow">→</span>
-      </a>
-      <a href="https://www.instagram.com/j23nfl/" target="_blank" class="contact-link">
-        <div>
-          <p class="cl-label">Instagram</p>
-          <p class="cl-value">@J23NFL</p>
-        </div>
-        <span class="cl-arrow">→</span>
-      </a>
-      <a href="https://www.linkedin.com/in/jesus-aranda-gamez-b5b3aa133/ target="_blank" class="contact-link">
-        <div>
-          <p class="cl-label">LinkedIn</p>
-          <p class="cl-value">Jesús Aranda Gámez</p>
-        </div>
-        <span class="cl-arrow">→</span>
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- FOOTER -->
-<footer>
-  <p>© 2024 Jesús Aranda Gámez</p>
-  <p>Editor Audiovisual · Motion Graphics · Contenido Digital</p>
-</footer>
+<!-- ── EFECTOS VISUALES ── -->
+<div class="scanlines"></div>
+<div id="crt"></div>
 
 <script>
+// ════════════════════════════════════════════
+//  CONSTANTES Y CONFIGURACIÓN
+// ════════════════════════════════════════════
+const WIN_SCORE    = 11;
+const PADDLE_W     = 12;
+const PADDLE_H     = 100;
+const BALL_RADIUS  = 10;
+const BASE_SPEED_X = 5;
+const BASE_SPEED_Y = 3;
 
+const canvas   = document.getElementById("gameCanvas");
+const ctx      = canvas.getContext("2d");
+const scoreDiv = document.getElementById("score");
+const hudLeft  = document.getElementById("hudLeft");
+const hudRight = document.getElementById("hudRight");
+
+// ════════════════════════════════════════════
+//  ESTADO DEL JUEGO
+// ════════════════════════════════════════════
+let gameMode     = 1;
+let aiSpeed      = 5;
+let paused       = false;
+let gameOver     = false;
+let player1Score = 0;
+let player2Score = 0;
+let level        = 1;
+let highScore    = parseInt(localStorage.getItem("pongHighScore") || "0");
+let animId       = null;
+
+const player1 = { x: 20,  y: 200, width: PADDLE_W, height: PADDLE_H, speed: 8 };
+const player2 = { x: 868, y: 200, width: PADDLE_W, height: PADDLE_H, speed: 8 };
+
+const ball = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    radius: BALL_RADIUS,
+    speedX: BASE_SPEED_X,
+    speedY: BASE_SPEED_Y
+};
+
+const keys = {};
+
+// ════════════════════════════════════════════
+//  POWER-UPS
+// ════════════════════════════════════════════
+const POWERUP_TYPES = ["bigPaddle", "speedBall", "slowAI"];
+const POWERUP_LABELS = {
+    bigPaddle: "¡PALA GRANDE!",
+    speedBall: "¡PELOTA RÁPIDA!",
+    slowAI:    "¡IA LENTA!"
+};
+const POWERUP_COLORS = {
+    bigPaddle: "#ffdd00",
+    speedBall: "#ff4444",
+    slowAI:    "#44aaff"
+};
+
+let activePowerup = null; // { type, timer, x, y, active }
+
+function spawnPowerup() {
+    if (activePowerup) return;
+    const type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+    activePowerup = {
+        x: canvas.width / 2 + (Math.random() * 200 - 100),
+        y: 80 + Math.random() * (canvas.height - 160),
+        type,
+        collected: false,
+        effectTimer: 0
+    };
+}
+
+function checkPowerupCollision() {
+    if (!activePowerup || activePowerup.collected) return;
+    const dx = ball.x - activePowerup.x;
+    const dy = ball.y - activePowerup.y;
+    if (Math.sqrt(dx*dx + dy*dy) < ball.radius + 14) {
+        activatePowerup(activePowerup.type);
+        activePowerup.collected = true;
+        activePowerup = null;
+    }
+}
+
+function activatePowerup(type) {
+    showFlash(POWERUP_LABELS[type]);
+    if (type === "bigPaddle") {
+        const target = Math.random() > 0.5 ? player1 : player2;
+        target.height = 180;
+        setTimeout(() => { target.height = PADDLE_H; }, 7000);
+    } else if (type === "speedBall") {
+        ball.speedX *= 1.6;
+        ball.speedY *= 1.6;
+        setTimeout(() => {
+            ball.speedX = Math.sign(ball.speedX) * BASE_SPEED_X * (1 + (level-1)*0.3);
+            ball.speedY = Math.sign(ball.speedY) * Math.abs(ball.speedY / 1.6);
+        }, 5000);
+    } else if (type === "slowAI") {
+        const saved = aiSpeed;
+        aiSpeed = Math.max(1, aiSpeed * 0.4);
+        setTimeout(() => { aiSpeed = saved; }, 6000);
+    }
+}
+
+function showFlash(msg) {
+    const el = document.getElementById("powerupFlash");
+    el.textContent = msg;
+    el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 2000);
+}
+
+// Spawn power-up cada 15s durante el juego
+let powerupInterval = null;
+
+// ════════════════════════════════════════════
+//  AUDIO
+// ════════════════════════════════════════════
+let audioCtx = null;
+
+function getAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioCtx;
+}
+
+function beep(freq, duration, type = "square") {
+    try {
+        const ac  = getAudio();
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.15, ac.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + duration / 1000);
+        osc.connect(gain);
+        gain.connect(ac.destination);
+        osc.start();
+        osc.stop(ac.currentTime + duration / 1000);
+    } catch(e) {}
+}
+
+// ════════════════════════════════════════════
+//  INPUT
+// ════════════════════════════════════════════
+document.addEventListener("keydown", (e) => {
+    keys[e.key] = true;
+
+    if (e.key === "Escape" && !gameOver) {
+        paused = !paused;
+        document.getElementById("pauseOverlay").style.display = paused ? "flex" : "none";
+        if (!paused) loop();
+    }
+});
+
+document.addEventListener("keyup", (e) => {
+    keys[e.key] = false;
+});
+
+// ════════════════════════════════════════════
+//  INICIAR PARTIDA
+// ════════════════════════════════════════════
+function startGame(mode) {
+    gameMode = mode;
+    aiSpeed  = parseInt(document.getElementById("difficulty").value);
+
+    document.getElementById("menu").style.display = "none";
+
+    player1Score = 0;
+    player2Score = 0;
+    level        = 1;
+    gameOver     = false;
+    paused       = false;
+
+    player1.height = PADDLE_H;
+    player2.height = PADDLE_H;
+
+    updateScore();
+    updateHUD();
+    resetBall();
+
+    powerupInterval = setInterval(spawnPowerup, 15000);
+
+    if (animId) cancelAnimationFrame(animId);
+    loop();
+}
+
+// ════════════════════════════════════════════
+//  RESET PELOTA
+// ════════════════════════════════════════════
+function resetBall() {
+    ball.x = canvas.width / 2;
+    ball.y = canvas.height / 2;
+
+    const speedMult = 1 + (level - 1) * 0.12;
+    ball.speedX = (Math.random() > 0.5 ? 1 : -1) * BASE_SPEED_X * speedMult;
+    ball.speedY = (Math.random() * 6 - 3) * speedMult;
+}
+
+// ════════════════════════════════════════════
+//  MOVIMIENTO
+// ════════════════════════════════════════════
+function movePlayers() {
+    // Jugador 1: W / S
+    if (keys["w"] || keys["W"]) player1.y -= player1.speed;
+    if (keys["s"] || keys["S"]) player1.y += player1.speed;
+    player1.y = clamp(player1.y, 0, canvas.height - player1.height);
+
+    // Jugador 2 / IA
+    if (gameMode === 1) {
+        const center = player2.y + player2.height / 2;
+        if (center < ball.y - 15) player2.y += aiSpeed;
+        if (center > ball.y + 15) player2.y -= aiSpeed;
+    } else {
+        if (keys["ArrowUp"])   player2.y -= player2.speed;
+        if (keys["ArrowDown"]) player2.y += player2.speed;
+    }
+    player2.y = clamp(player2.y, 0, canvas.height - player2.height);
+}
+
+// ════════════════════════════════════════════
+//  FÍSICA DE LA PELOTA
+// ════════════════════════════════════════════
+const MAX_BALL_SPEED = 22;
+
+function updateBall() {
+    ball.x += ball.speedX;
+    ball.y += ball.speedY;
+
+    // Rebote techo/suelo
+    if (ball.y - ball.radius < 0) {
+        ball.y = ball.radius;
+        ball.speedY = Math.abs(ball.speedY);
+        beep(300, 50);
+    }
+    if (ball.y + ball.radius > canvas.height) {
+        ball.y = canvas.height - ball.radius;
+        ball.speedY = -Math.abs(ball.speedY);
+        beep(300, 50);
+    }
+
+    // Colisión pala izquierda
+    if (
+        ball.speedX < 0 &&
+        ball.x - ball.radius < player1.x + player1.width &&
+        ball.x - ball.radius > player1.x &&
+        ball.y >= player1.y &&
+        ball.y <= player1.y + player1.height
+    ) {
+        ball.x = player1.x + player1.width + ball.radius;
+        const hitPos = (ball.y - player1.y) / player1.height - 0.5; // -0.5..0.5
+        ball.speedX  = Math.min(Math.abs(ball.speedX) * 1.05, MAX_BALL_SPEED);
+        ball.speedY  = hitPos * 10;
+        beep(600, 50);
+    }
+
+    // Colisión pala derecha
+    if (
+        ball.speedX > 0 &&
+        ball.x + ball.radius > player2.x &&
+        ball.x + ball.radius < player2.x + player2.width &&
+        ball.y >= player2.y &&
+        ball.y <= player2.y + player2.height
+    ) {
+        ball.x = player2.x - ball.radius;
+        const hitPos = (ball.y - player2.y) / player2.height - 0.5;
+        ball.speedX  = -Math.min(Math.abs(ball.speedX) * 1.05, MAX_BALL_SPEED);
+        ball.speedY  = hitPos * 10;
+        beep(600, 50);
+    }
+
+    // Punto
+    if (ball.x < 0) {
+        player2Score++;
+        beep(120, 180);
+        onPoint();
+    }
+    if (ball.x > canvas.width) {
+        player1Score++;
+        beep(120, 180);
+        onPoint();
+    }
+
+    checkPowerupCollision();
+}
+
+function onPoint() {
+    updateScore();
+    checkWinner();
+    if (!gameOver) {
+        // Subir nivel cada 3 puntos combinados
+        const total = player1Score + player2Score;
+        if (total > 0 && total % 3 === 0) {
+            level++;
+            aiSpeed += 0.4;
+            updateHUD();
+            showFlash("NIVEL " + level);
+        }
+        resetBall();
+    }
+}
+
+// ════════════════════════════════════════════
+//  MARCADOR Y VICTORIA
+// ════════════════════════════════════════════
+function updateScore() {
+    scoreDiv.textContent = player1Score + " : " + player2Score;
+}
+
+function updateHUD() {
+    const best = Math.max(highScore, player1Score);
+    hudLeft.textContent  = "RÉCORD: " + best;
+    hudRight.textContent = "NIVEL " + level;
+}
+
+function checkWinner() {
+    if (gameOver) return;
+
+    if (player1Score >= WIN_SCORE) {
+        endGame("JUGADOR 1");
+    } else if (player2Score >= WIN_SCORE) {
+        endGame(gameMode === 1 ? "IA" : "JUGADOR 2");
+    }
+}
+
+function endGame(winner) {
+    gameOver = true;
+    paused   = false;
+
+    clearInterval(powerupInterval);
+
+    // Guardar récord
+    const best = Math.max(highScore, player1Score, player2Score);
+    localStorage.setItem("pongHighScore", best);
+    highScore = best;
+    updateHUD();
+
+    document.getElementById("winnerText").textContent  = winner + " GANA";
+    document.getElementById("finalScore").textContent  =
+        "MARCADOR FINAL: " + player1Score + " — " + player2Score;
+    document.getElementById("victoryScreen").style.display = "flex";
+
+    beep(880, 100); beep(660, 100); beep(440, 300);
+}
+
+// ════════════════════════════════════════════
+//  DIBUJO
+// ════════════════════════════════════════════
+function drawRect(x, y, w, h, color = "#00ff66", glow = false) {
+    ctx.fillStyle = color;
+    if (glow) {
+        ctx.shadowBlur  = 15;
+        ctx.shadowColor = color;
+    }
+    ctx.fillRect(x, y, w, h);
+    ctx.shadowBlur = 0;
+}
+
+function drawBall() {
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fillStyle  = "#00ff66";
+    ctx.shadowBlur  = 25;
+    ctx.shadowColor = "#00ff66";
+    ctx.fill();
+    ctx.shadowBlur = 0;
+}
+
+function drawCenterLine() {
+    ctx.fillStyle = "rgba(0,255,102,0.3)";
+    for (let i = 0; i < canvas.height; i += 28) {
+        ctx.fillRect(canvas.width / 2 - 2, i, 4, 16);
+    }
+}
+
+function drawPowerup() {
+    if (!activePowerup || activePowerup.collected) return;
+    const { x, y, type } = activePowerup;
+    const color = POWERUP_COLORS[type];
+    ctx.beginPath();
+    ctx.arc(x, y, 14, 0, Math.PI * 2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 2;
+    ctx.shadowBlur  = 15;
+    ctx.shadowColor = color;
+    ctx.stroke();
+    ctx.shadowBlur  = 0;
+    ctx.lineWidth   = 1;
+
+    ctx.fillStyle  = color;
+    ctx.font       = "bold 13px Courier New";
+    ctx.textAlign  = "center";
+    ctx.fillText("★", x, y + 5);
+    ctx.textAlign  = "left";
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawCenterLine();
+    drawRect(player1.x, player1.y, player1.width, player1.height, "#00ff66", true);
+    drawRect(player2.x, player2.y, player2.width, player2.height, "#00ff66", true);
+    drawBall();
+    drawPowerup();
+}
+
+// ════════════════════════════════════════════
+//  LOOP PRINCIPAL
+// ════════════════════════════════════════════
+function loop() {
+    if (gameOver || paused) return;
+
+    movePlayers();
+    updateBall();
+    draw();
+
+    animId = requestAnimationFrame(loop);
+}
+
+// ════════════════════════════════════════════
+//  UTILIDADES
+// ════════════════════════════════════════════
+function clamp(val, min, max) {
+    return Math.max(min, Math.min(max, val));
+}
+
+// Dibujo inicial (canvas visible antes de empezar)
+draw();
 </script>
 </body>
 </html>
